@@ -1,75 +1,31 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>쾌변의 기사단</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Noto Sans KR', sans-serif;
-      }
-      h1, h2, h3, .game-font {
-        font-family: 'Jua', sans-serif;
-      }
-      /* Custom Scrollbar for better UX */
-      ::-webkit-scrollbar {
-        width: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #d1d5db;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #9ca3af;
-      }
-
-      /* Animations */
-      @keyframes bounce-in {
-        0% { transform: scale(0.3); opacity: 0; }
-        50% { transform: scale(1.05); opacity: 1; }
-        70% { transform: scale(0.9); }
-        100% { transform: scale(1); }
-      }
-      .animate-bounce-in {
-        animation: bounce-in 0.5s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
-      }
-
-      @keyframes fade-out {
-        0% { opacity: 1; transform: scale(1); }
-        100% { opacity: 0; transform: scale(0.9); }
-      }
-      .animate-fade-out {
-        animation: fade-out 0.3s ease-out both;
-      }
-      
-      @keyframes fade-in {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .animate-fade-in {
-        animation: fade-in 0.5s ease-out forwards;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0"
-  }
-}
-</script>
 </head>
-  <body class="bg-slate-100 text-slate-800 antialiased overflow-hidden">
+<body>
     <div id="root"></div>
-  </body>
+    <script type="text/babel">
+        // 임시 화면입니다. 가온이 아빠님, 여기에 나중에 진짜 코드를 넣을 거예요!
+        function App() {
+            return (
+                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif'}}>
+                    <h1 style={{color: '#3b82f6'}}>🛡️ 쾌변의 기사단</h1>
+                    <p>아빠가 만든 앱에 접속 성공!</p>
+                    <button style={{padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', marginTop: '20px'}}>
+                        모험 시작하기
+                    </button>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
