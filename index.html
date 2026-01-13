@@ -1,166 +1,75 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>쾌변의 기사단</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
-        .game-font { font-family: 'Gaegu', cursive; }
-        body { background-color: #f8fafc; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      body {
+        font-family: 'Noto Sans KR', sans-serif;
+      }
+      h1, h2, h3, .game-font {
+        font-family: 'Jua', sans-serif;
+      }
+      /* Custom Scrollbar for better UX */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+
+      /* Animations */
+      @keyframes bounce-in {
+        0% { transform: scale(0.3); opacity: 0; }
+        50% { transform: scale(1.05); opacity: 1; }
+        70% { transform: scale(0.9); }
+        100% { transform: scale(1); }
+      }
+      .animate-bounce-in {
+        animation: bounce-in 0.5s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+      }
+
+      @keyframes fade-out {
+        0% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(0.9); }
+      }
+      .animate-fade-out {
+        animation: fade-out 0.3s ease-out both;
+      }
+      
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.5s ease-out forwards;
+      }
     </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0"
+  }
+}
+</script>
 </head>
-<body>
+  <body class="bg-slate-100 text-slate-800 antialiased overflow-hidden">
     <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        // --- 아이콘 컴포넌트 설정 ---
-        const Icon = ({ name, size = 24, className = "" }) => {
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
-            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
-        };
-
-        // --- 상수 및 초기 데이터 (아버님 코드에서 가져옴) ---
-        const DAILY_WATER_GOAL = 8;
-        const XP_THRESHOLDS = { LEVEL_2: 100, LEVEL_3: 300 };
-        const INITIAL_CHILD_DATA = [{
-            profile: { id: 'child_1', username: 'gaon', password: '123', name: '가온', age: 7, gender: 'MALE', level: 1, xp: 0, tickets: { silver: 2, gold: 0 } },
-            waterLogs: [], poopLogs: [], vegetableLogs: [], probioticsLogs: [], wonRewards: []
-        }];
-
-        // --- 메인 App 컴포넌트 ---
-        function App() {
-            // 아버님의 상태 관리 로직 통합
-            const [children, setChildren] = useState(() => {
-                const saved = localStorage.getItem('knight_children_data');
-                return saved ? JSON.parse(saved) : INITIAL_CHILD_DATA;
-            });
-            const [isLoggedIn, setIsLoggedIn] = useState(false);
-            const [currentUserType, setCurrentUserType] = useState('CHILD');
-            const [activeChildId, setActiveChildId] = useState(null);
-            const [currentView, setCurrentView] = useState('HOME');
-            const [loginId, setLoginId] = useState('');
-            const [loginPw, setLoginPw] = useState('');
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const activeChild = children.find(c => c.profile.id === activeChildId) || children[0];
-
-            // 데이터 저장 효과
-            useEffect(() => {
-                localStorage.setItem('knight_children_data', JSON.stringify(children));
-            }, [children]);
-
-            // 로그인 함수
-            const handleLogin = () => {
-                const child = children.find(c => c.profile.username === loginId && c.profile.password === loginPw);
-                if (child) {
-                    setActiveChildId(child.profile.id);
-                    setIsLoggedIn(true);
-                } else {
-                    alert('아이디나 비밀번호를 확인해주세요! (테스트용: gaon / 123)');
-                }
-            };
-
-            // 물 마시기 업데이트 (아버님 로직 반영)
-            const handleAddWater = () => {
-                const newChildren = children.map(c => {
-                    if (c.profile.id === activeChildId) {
-                        const logs = [...c.waterLogs];
-                        const idx = logs.findIndex(l => l.date === todayStr);
-                        const currentCount = idx >= 0 ? logs[idx].count : 0;
-                        if (currentCount < DAILY_WATER_GOAL) {
-                            if (idx >= 0) logs[idx].count += 1;
-                            else logs.push({ date: todayStr, count: 1 });
-                            return { ...c, waterLogs: logs, profile: { ...c.profile, xp: c.profile.xp + 10 } };
-                        }
-                    }
-                    return c;
-                });
-                setChildren(newChildren);
-            };
-
-            // --- 로그인 화면 ---
-            if (!isLoggedIn) {
-                return (
-                    <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-6">
-                        <div className="bg-slate-800 p-8 rounded-2xl border-4 border-amber-500 shadow-2xl w-full max-w-md">
-                            <h1 className="text-4xl font-bold game-font text-amber-400 text-center mb-8">🛡️ 쾌변의 기사단</h1>
-                            <input type="text" placeholder="아이디" className="w-full bg-slate-700 p-4 rounded-xl mb-4" value={loginId} onChange={e => setLoginId(e.target.value)} />
-                            <input type="password" placeholder="비밀번호" className="w-full bg-slate-700 p-4 rounded-xl mb-6" value={loginPw} onChange={e => setLoginPw(e.target.value)} />
-                            <button onClick={handleLogin} className="w-full bg-amber-500 py-4 rounded-xl font-bold text-xl hover:bg-amber-400 transition">기사단 입장</button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // --- 메인 게임 화면 ---
-            const todayWater = activeChild.waterLogs.find(l => l.date === todayStr)?.count || 0;
-
-            return (
-                <div className="h-screen flex flex-col max-w-md mx-auto bg-white shadow-2xl">
-                    <header className="p-4 bg-white border-b flex justify-between items-center">
-                        <h2 className="game-font text-2xl text-amber-800 font-bold">🛡️ {activeChild.profile.name} 기사</h2>
-                        <button onClick={() => setIsLoggedIn(false)}><Icon name="log-out" size={20} className="text-gray-400"/></button>
-                    </header>
-
-                    <main className="flex-1 p-6 space-y-6 overflow-y-auto">
-                        {/* 레벨 바 */}
-                        <div className="bg-amber-100 p-4 rounded-2xl">
-                            <div className="flex justify-between font-bold mb-2">
-                                <span>Level {activeChild.profile.level}</span>
-                                <span>XP {activeChild.profile.xp}</span>
-                            </div>
-                            <div className="w-full bg-amber-200 h-4 rounded-full overflow-hidden">
-                                <div className="bg-amber-500 h-full" style={{width: `${(activeChild.profile.xp / 100) * 100}%`}}></div>
-                            </div>
-                        </div>
-
-                        {/* 메인 메뉴 버튼들 */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={handleAddWater} className="bg-blue-500 text-white p-6 rounded-3xl shadow-lg flex flex-col items-center">
-                                <Icon name="droplet" size={40} className="mb-2"/>
-                                <span className="font-bold text-lg">물 마시기</span>
-                                <span>{todayWater} / {DAILY_WATER_GOAL}</span>
-                            </button>
-                            <button className="bg-amber-500 text-white p-6 rounded-3xl shadow-lg flex flex-col items-center">
-                                <Icon name="calendar" size={40} className="mb-2"/>
-                                <span className="font-bold text-lg">배변 기록</span>
-                                <span>도감 채우기</span>
-                            </button>
-                        </div>
-
-                        <div className="bg-purple-100 p-6 rounded-3xl flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <Icon name="gift" size={30} className="text-purple-600"/>
-                                <div>
-                                    <p className="font-bold text-purple-900">보상 뽑기</p>
-                                    <p className="text-sm text-purple-700">티켓: {activeChild.profile.tickets.silver}개</p>
-                                </div>
-                            </div>
-                            <button className="bg-purple-500 text-white px-4 py-2 rounded-xl font-bold">이동</button>
-                        </div>
-                    </main>
-
-                    <nav className="border-t p-4 flex justify-around bg-gray-50">
-                        <button className="text-amber-600 flex flex-col items-center"><Icon name="user"/><span className="text-xs font-bold">홈</span></button>
-                        <button className="text-gray-400 flex flex-col items-center"><Icon name="droplet"/><span className="text-xs font-bold">수분</span></button>
-                        <button className="text-gray-400 flex flex-col items-center"><Icon name="calendar"/><span className="text-xs font-bold">도감</span></button>
-                        <button className="text-gray-400 flex flex-col items-center"><Icon name="settings"/><span className="text-xs font-bold">설정</span></button>
-                    </nav>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
+  </body>
 </html>
