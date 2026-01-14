@@ -16,6 +16,10 @@ import { PoopLog } from './components/PoopLog';
 import { RewardGacha } from './components/RewardGacha';
 import { ParentDashboard } from './components/ParentDashboard';
 
+// --- 구글 서버 연결 부품 추가 ---
+import { db } from './index'; 
+import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
+
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'PARENT_SIGNUP';
 type UserType = 'CHILD' | 'PARENT';
 
@@ -23,22 +27,24 @@ export default function App() {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  // Global State
-  const [children, setChildren] = useState<ChildData[]>(() => {
-    const saved = localStorage.getItem('knight_children_data');
-    if (!saved) return INITIAL_CHILD_DATA;
-    try {
-        const parsed = JSON.parse(saved);
-        // Migration: Ensure new fields exist for legacy data
-        return parsed.map((c: any) => ({
-            ...c,
-            vegetableLogs: c.vegetableLogs || [],
-            probioticsLogs: c.probioticsLogs || []
-        }));
-    } catch {
-        return INITIAL_CHILD_DATA;
-    }
-  });
+ // Global State (아래 내용으로 싹 교체)
+  const [children, setChildren] = useState<ChildData[]>([]);
+  const [parents, setParents] = useState<ParentProfile[]>([]);
+
+  // 서버 데이터 실시간 감시 (새로 추가)
+  useEffect(() => {
+    const unsubChildren = onSnapshot(collection(db, 'children'), (snapshot) => {
+      if (!snapshot.empty) {
+        setChildren(snapshot.docs.map(doc => doc.data() as ChildData));
+      } else {
+        setChildren(INITIAL_CHILD_DATA);
+      }
+    });
+    const unsubParents = onSnapshot(collection(db, 'parents'), (snapshot) => {
+      setParents(snapshot.docs.map(doc => doc.data() as ParentProfile));
+    });
+    return () => { unsubChildren(); unsubParents(); };
+  }, []);
   
   const [parents, setParents] = useState<ParentProfile[]>(() => {
     const saved = localStorage.getItem('knight_parents_data');
