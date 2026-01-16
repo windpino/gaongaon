@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  User, Droplet, Calendar, Gift, LogOut, ShieldCheck, Carrot, Pill, Coins
+  User, Droplet, Calendar, Gift, LogOut, ShieldCheck, Settings, Coins
 } from 'lucide-react';
 import { 
-  ScreenView, ChildData, Gender, ParentProfile, XP_THRESHOLDS
+  ScreenView, ChildData, Gender, ParentProfile, RewardItem, RewardTier, PoopType, DAILY_WATER_GOAL
 } from './types';
-import { INITIAL_CHILD_DATA } from './constants';
+import { INITIAL_CHILD_DATA, DEFAULT_REWARDS } from './constants';
 
 // --- 서버 연결 부품 ---
 import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
 
-// Components (아버님 프로젝트 폴더 구조에 맞게 설정)
+// Components
 import { LevelBadge } from './components/LevelBadge';
 import { WaterQuest } from './components/WaterQuest';
 import { PoopLog } from './components/PoopLog';
@@ -30,20 +30,39 @@ export default function App() {
   // Global State
   const [children, setChildren] = useState<ChildData[]>(INITIAL_CHILD_DATA);
   const [parents, setParents] = useState<ParentProfile[]>([]);
+  const [parentRewards, setParentRewards] = useState<RewardItem[]>(DEFAULT_REWARDS);
 
   // 실시간 데이터 연결
   useEffect(() => {
     if (!db) return;
+    
     const unsubChildren = onSnapshot(collection(db, 'children'), (snapshot) => {
       if (!snapshot.empty) {
-        setChildren(snapshot.docs.map(doc => doc.data() as ChildData));
+        // Filter out malformed data to prevent "reading 'id' of undefined" errors
+        const validChildren = snapshot.docs
+          .map(doc => doc.data() as ChildData)
+          .filter(data => data?.profile?.id);
+        
+        if (validChildren.length > 0) {
+            setChildren(validChildren);
+        }
       }
     });
+
     const unsubParents = onSnapshot(collection(db, 'parents'), (snapshot) => {
       if (!snapshot.empty) {
-        setParents(snapshot.docs.map(doc => doc.data() as ParentProfile));
+         // Filter out malformed data
+        const validParents = snapshot.docs
+          .map(doc => doc.data() as ParentProfile)
+          .filter(data => data?.id);
+          
+        setParents(validParents);
       }
     });
+    
+    // Rewards could also be synced if you have a rewards collection
+    // const unsubRewards = onSnapshot(collection(db, 'rewards'), ...);
+
     return () => { unsubChildren(); unsubParents(); };
   }, [db]);
 
@@ -64,18 +83,25 @@ export default function App() {
   const [signupGender, setSignupGender] = useState<Gender>('MALE');
   const [toast, setToast] = useState<{ message: string; isVisible: boolean }>({ message: '', isVisible: false });
 
-  const activeChild = children.find(c => c.profile.id === activeChildId);
-  const activeParent = parents.find(p => p.id === activeParentId);
+  // Safe Access with Optional Chaining
+  const activeChild = children.find(c => c?.profile?.id === activeChildId);
+  const activeParent = parents.find(p => p?.id === activeParentId);
+
+  // Derived State for Water
+  const todayWaterCount = activeChild?.waterLogs.find(w => w.date === todayStr)?.count || 0;
 
   const handleLogin = () => {
-    const child = children.find(c => c.profile.username === loginId && c.profile.password === loginPw);
-    if (child) {
+    // Safety check for child login
+    const child = children.find(c => c?.profile?.username === loginId && c?.profile?.password === loginPw);
+    if (child && child.profile) {
       setActiveChildId(child.profile.id);
       setCurrentUserType('CHILD');
       setIsLoggedIn(true);
       return;
     }
-    const parent = parents.find(p => p.username === loginId && p.password === loginPw);
+
+    // Safety check for parent login
+    const parent = parents.find(p => p?.username === loginId && p?.password === loginPw);
     if (parent) {
       setActiveParentId(parent.id);
       setCurrentUserType('PARENT');
@@ -94,19 +120,34 @@ export default function App() {
           profile: { id: `child_${Date.now()}`, username: signupId, password: signupPw, name: signupName, age: parseInt(signupAge), gender: signupGender, level: 1, xp: 0, tickets: { silver: 0, gold: 0 } },
           waterLogs: [], poopLogs: [], vegetableLogs: [], probioticsLogs: [], wonRewards: []
         };
-        if (db) await setDoc(doc(db, 'children', newChild.profile.id), newChild);
+        // Optimistic update
+        setChildren(prev => [...prev, newChild]);
         setActiveChildId(newChild.profile.id);
         setCurrentUserType('CHILD');
+        
+        if (db) await setDoc(doc(db, 'children', newChild.profile.id), newChild);
       } else {
         const newParent: ParentProfile = { id: `parent_${Date.now()}`, username: signupId, password: signupPw, name: signupName, linkedChildIds: [] };
-        if (db) await setDoc(doc(db, 'parents', newParent.id), newParent);
+        // Optimistic update
+        setParents(prev => [...prev, newParent]);
         setActiveParentId(newParent.id);
         setCurrentUserType('PARENT');
         setCurrentView('PARENT_HUB');
+        
+        if (db) await setDoc(doc(db, 'parents', newParent.id), newParent);
       }
       setIsLoggedIn(true);
-    } catch (e) { alert('가입 중 오류가 발생했습니다.'); }
+    } catch (e) { 
+        console.error(e);
+        alert('가입 중 오류가 발생했습니다.'); 
+    }
   };
+
+  // Stub handlers for now (Implement actual logic as needed)
+  const handleUpdateWater = () => { console.log('Update Water - Implement Firebase logic'); };
+  const handleAddPoop = (type: PoopType) => { console.log('Add Poop - Implement Firebase logic', type); };
+  const handleRedeemTicket = () => { console.log('Redeem Ticket - Implement Firebase logic'); };
+  const handleParentUpdate = () => { console.log('Parent Update - Implement Firebase logic'); };
 
   if (!isLoggedIn) {
     return (
@@ -153,6 +194,7 @@ export default function App() {
         <div className="flex flex-col"><span className="font-bold text-amber-800 text-xl tracking-tight">쾌변의 기사단</span></div>
         <button onClick={() => setIsLoggedIn(false)} className="p-2 bg-gray-100 rounded-full"><LogOut className="w-4 h-4 text-gray-600"/></button>
       </header>
+      
       <main className="flex-1 overflow-y-auto max-w-xl w-full mx-auto p-4 pb-24">
         {currentView === 'HOME' && activeChild && (
           <div className="space-y-6">
@@ -163,16 +205,58 @@ export default function App() {
             </div>
           </div>
         )}
-        {currentView === 'WATER' && activeChild && <WaterQuest logs={activeChild.waterLogs} onUpdateWater={() => {}} />}
-        {currentView === 'POOP' && activeChild && <PoopLog logs={activeChild.poopLogs} profile={activeChild.profile} onAddPastPoop={() => {}} />}
-        {currentView === 'GACHA' && activeChild && <RewardGacha childData={activeChild} onGachaSuccess={() => {}} onRewardRedeemed={() => {}} />}
-        {currentView === 'PARENT_HUB' && activeParent && <ParentDashboard parent={activeParent} children={children} rewards={[]} onUpdateRewards={() => {}} onUpdateChild={() => {}} />}
+
+        {/* Component Props Fixed to match definitions */}
+        {currentView === 'WATER' && activeChild && (
+            <WaterQuest 
+                currentCount={todayWaterCount} 
+                onAddWater={handleUpdateWater} 
+            />
+        )}
+        
+        {currentView === 'POOP' && activeChild && (
+            <PoopLog 
+                poopLogs={activeChild.poopLogs} 
+                onAddPoop={handleAddPoop} 
+            />
+        )}
+        
+        {currentView === 'GACHA' && activeChild && (
+            <RewardGacha 
+                user={activeChild.profile} 
+                wonRewards={activeChild.wonRewards} 
+                parentRewards={parentRewards} 
+                onRedeemTicket={handleRedeemTicket} 
+            />
+        )}
+        
+        {currentView === 'PARENT_HUB' && activeParent && (
+            <ParentDashboard 
+                childrenData={children} 
+                activeChildId={activeChildId || ''} 
+                parentRewards={parentRewards} 
+                isParentLoggedIn={true}
+                onAddChild={handleParentUpdate}
+                onEditChild={handleParentUpdate}
+                onDeleteChild={handleParentUpdate}
+                onSwitchChild={setActiveChildId}
+                onAddRewardItem={handleParentUpdate}
+                onEditRewardItem={handleParentUpdate}
+                onDeleteRewardItem={handleParentUpdate}
+                onRedeemReward={handleParentUpdate}
+                onUpdateWater={handleParentUpdate}
+                onAddPastPoop={handleParentUpdate}
+                onToggleLog={handleParentUpdate}
+            />
+        )}
       </main>
+
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around h-16 max-w-xl mx-auto w-full z-20">
         <button onClick={() => setCurrentView('HOME')} className={`flex flex-col items-center justify-center w-full ${currentView === 'HOME' ? 'text-amber-600' : 'text-gray-400'}`}><User /><span className="text-xs font-bold">홈</span></button>
         <button onClick={() => setCurrentView('WATER')} className={`flex flex-col items-center justify-center w-full ${currentView === 'WATER' ? 'text-amber-600' : 'text-gray-400'}`}><Droplet /><span className="text-xs font-bold">수분</span></button>
         <button onClick={() => setCurrentView('POOP')} className={`flex flex-col items-center justify-center w-full ${currentView === 'POOP' ? 'text-amber-600' : 'text-gray-400'}`}><Calendar /><span className="text-xs font-bold">도감</span></button>
         <button onClick={() => setCurrentView('GACHA')} className={`flex flex-col items-center justify-center w-full ${currentView === 'GACHA' ? 'text-amber-600' : 'text-gray-400'}`}><Gift /><span className="text-xs font-bold">뽑기</span></button>
+        {currentUserType === 'PARENT' && <button onClick={() => setCurrentView('PARENT_HUB')} className={`flex flex-col items-center justify-center w-full ${currentView === 'PARENT_HUB' ? 'text-amber-600' : 'text-gray-400'}`}><Settings /><span className="text-xs font-bold">부모</span></button>}
       </nav>
     </div>
   );
